@@ -1,6 +1,6 @@
 substitutions:
-  name: "laser-template"
-  friendly_name: "Laser Template"
+  name: "esp-laser"
+  friendly_name: "ESP Laser"
 
 esphome:
   name: "${name}"
@@ -11,13 +11,13 @@ esphome:
     version: "1.0"
 
 dashboard_import:
-    package_import_url: github://jerryhjones/esphome-project-templates/laser.yaml@main
+    package_import_url: github://jerryhjones/esphome-templates/laser.yaml@main
     import_full_config: false # or true
 
 # Replace the ESP32 configuration with the ESP8266 configuration
 esp8266:
   board: nodemcuv2 # Change to your ESP8266 board model
-  
+
 debug:
 button:
   - platform: restart
