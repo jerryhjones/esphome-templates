@@ -1,0 +1,78 @@
+substitutions:
+  name: "laser-template"
+  friendly_name: "Laser Template"
+
+esphome:
+  name: "${name}"
+  friendly_name: "${friendly_name}"
+  name_add_mac_suffix: true
+  project:
+    name: jjones.laser-template
+    version: "1.0"
+
+dashboard_import:
+    package_import_url: github://jerryhjones/esphome-project-templates/laser.yaml@main
+    import_full_config: false # or true
+
+# Replace the ESP32 configuration with the ESP8266 configuration
+esp8266:
+  board: nodemcuv2 # Change to your ESP8266 board model
+  
+debug:
+button:
+  - platform: restart
+    name: "Restart"
+
+text_sensor:
+  - platform: debug
+    reset_reason:
+      name: "Reset Reason"
+
+sensor:
+  - platform: uptime
+    name: "Uptime"
+
+logger:
+api:
+ota:
+wifi:
+  ap:
+
+captive_portal:
+
+# Modify the PWM outputs for ESP8266
+output:
+  - platform: esp8266_pwm
+    pin: D5 # Change to the actual GPIO pin used on your ESP8266
+    id: pwm_red
+  - platform: esp8266_pwm
+    pin: D6 # Change to the actual GPIO pin used on your ESP8266
+    id: pwm_green
+  - platform: esp8266_pwm
+    pin: D7 # Change to the actual GPIO pin used on your ESP8266
+    id: pwm_blue
+  - platform: esp8266_pwm
+    pin: D8 # Change to the actual GPIO pin used on your ESP8266
+    id: pwm_motor
+
+light:
+  - platform: monochromatic
+    name: "Red Laser"
+    output: pwm_red
+    id: light_red
+    default_transition_length: 1s
+  - platform: monochromatic
+    name: "Green Laser"
+    output: pwm_green
+    id: light_green
+    default_transition_length: 1s
+  - platform: monochromatic
+    name: "Blue Laser"
+    output: pwm_blue
+    id: light_blue
+    default_transition_length: 1s
+
+fan:
+  - platform: speed
+    output: pwm_motor
+    name: "Motor Speed"
