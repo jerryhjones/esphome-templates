@@ -5,7 +5,7 @@ substitutions:
 external_components:
   - source:
       type: git
-      url: https://github.com/jerryhjones/kaufHA-common/common@multipleddp
+      url: https://github.com/jerryhjones/kaufHA-common@multipleddp
     components: [ ddp ]
     refresh: always
 
@@ -15,7 +15,7 @@ esphome:
   name_add_mac_suffix: true
   project:
     name: jjones.esp8266laser
-    version: "1.0.1"
+    version: "1.0.2"
 
 dashboard_import:
     package_import_url: github://jerryhjones/esphome-templates/jjones-laser8266.yaml@main
