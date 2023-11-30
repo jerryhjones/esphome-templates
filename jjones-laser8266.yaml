@@ -5,7 +5,8 @@ substitutions:
 external_components:
   - source:
       type: git
-      url: https://github.com/jerryhjones/kaufHA-common@jjones-ddp
+      url: https://github.com/jerryhjones/kaufHA-common
+      ref: multipleddp
     components: [ ddp ]
     refresh: always
 
@@ -15,15 +16,14 @@ esphome:
   name_add_mac_suffix: true
   project:
     name: jjones.esp8266laser
-    version: "1.0.3"
+    version: "1.0.4"
 
 dashboard_import:
-    package_import_url: github://jerryhjones/esphome-templates/jjones-laser8266.yaml@1.0.3
+    package_import_url: github://jerryhjones/esphome-templates/jjones-laser8266.yaml@1.0.4
     import_full_config: false # or true
 
-# Replace the ESP32 configuration with the ESP8266 configuration
 esp8266:
-  board: nodemcuv2 # Change to your ESP8266 board model
+  board: nodemcuv2
 
 ddp:
 debug:
@@ -51,16 +51,16 @@ captive_portal:
 # Modify the PWM outputs for ESP8266
 output:
   - platform: esp8266_pwm
-    pin: D5 # Change to the actual GPIO pin used on your ESP8266
+    pin: D5 
     id: pwm_red
   - platform: esp8266_pwm
-    pin: D6 # Change to the actual GPIO pin used on your ESP8266
+    pin: D6 
     id: pwm_green
   - platform: esp8266_pwm
-    pin: D7 # Change to the actual GPIO pin used on your ESP8266
+    pin: D7 
     id: pwm_blue
   - platform: esp8266_pwm
-    pin: D8 # Change to the actual GPIO pin used on your ESP8266
+    pin: D8 
     id: pwm_motor
   - platform: esp8266_pwm
     pin: D4
