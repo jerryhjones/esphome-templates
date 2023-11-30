@@ -15,7 +15,7 @@ esphome:
   name_add_mac_suffix: true
   project:
     name: jjones.esp8266laser
-    version: "0.0.1"
+    version: "1.0"
 
 dashboard_import:
     package_import_url: github://jerryhjones/esphome-templates/jjones-laser8266.yaml@main
