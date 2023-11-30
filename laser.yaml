@@ -62,20 +62,29 @@ output:
   - platform: esp8266_pwm
     pin: D8 # Change to the actual GPIO pin used on your ESP8266
     id: pwm_motor
+  - platform: esp8266_pwm
+    pin: D4
+    id: 'null_output'
 
 light:
-  - platform: rgbww
-    name: "RGBWW Laser"
+  - platform: rgb
+    name: "DDP Composite Laser"
     red: pwm_red
     green: pwm_green
     blue: pwm_blue
-    warm_white: pwm_motor
-    cold_white: pwm_motor
     effects:
       - ddp:
           timeout: 10s
           disable_gamma: true
-          brightness_scaling: none
+  - platform: rgb
+    name: "DDP Laser Rotation"
+    red: pwm_motor
+    green: null_output
+    blue: null_output
+    effects:
+      - ddp:
+          timeout: 10s
+          disable_gamma: true
   - platform: monochromatic
     name: "Red Laser"
     output: pwm_red
