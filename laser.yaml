@@ -2,13 +2,20 @@ substitutions:
   name: "esp-laser"
   friendly_name: "ESP Laser"
 
+external_components:
+  - source:
+      type: git
+      url: https://github.com/KaufHA/common
+    components: [ ddp ]
+    refresh: always
+
 esphome:
   name: "${name}"
   friendly_name: "${friendly_name}"
   name_add_mac_suffix: true
   project:
-    name: jjones.laser-template
-    version: "1.0"
+    name: jjones.esplaser
+    version: "1.0.1"
 
 dashboard_import:
     package_import_url: github://jerryhjones/esphome-templates/laser.yaml@main
@@ -18,6 +25,7 @@ dashboard_import:
 esp8266:
   board: nodemcuv2 # Change to your ESP8266 board model
 
+ddp:
 debug:
 button:
   - platform: restart
@@ -56,6 +64,18 @@ output:
     id: pwm_motor
 
 light:
+  - platform: rgbww
+    name: "RGBWW Laser"
+    red: pwm_red
+    green: pwm_green
+    blue: pwm_blue
+    warm_white: pwm_motor
+    cold_white: pwm_motor
+    effects:
+      - ddp:
+          timeout: 10s
+          disable_gamma: true
+          brightness_scaling: none
   - platform: monochromatic
     name: "Red Laser"
     output: pwm_red
@@ -71,8 +91,8 @@ light:
     output: pwm_blue
     id: light_blue
     default_transition_length: 1s
-
-fan:
-  - platform: speed
+  - platform: monochromatic
+    name: "Rotation Speed"
     output: pwm_motor
-    name: "Motor Speed"
+    id: motor_speed
+    default_transition_length: 0s
