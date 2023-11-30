@@ -1,4 +1,3 @@
-
 substitutions:
   name: "novostella-flood"
   friendly_name: "Novostella Flood"
@@ -10,6 +9,18 @@ external_components:
     components: [ ddp ]
     refresh: always
 
+esphome:
+  name: "${name}"
+  friendly_name: "${friendly_name}"
+  name_add_mac_suffix: true
+  project:
+    name: jjones.novostella-flood
+    version: "1.0.2"
+
+dashboard_import:
+    package_import_url: github://jerryhjones/esphome-templates/novostella-flood-template.yaml@main
+    import_full_config: false # or true
+
 logger:
 api:
 ota:
@@ -17,19 +28,6 @@ wifi:
   ap:
 
 captive_portal:
-
-esphome:
-  name: "${name}"
-  friendly_name: "${friendly_name}"
-  name_add_mac_suffix: true
-  project:
-    name: jjones.novostella-flood
-    version: "1.0.1"
-
-dashboard_import:
-    package_import_url: github://jerryhjones/esphome-templates/novostella-flood-template.yaml@main
-    import_full_config: false # or true
-
 
 bk72xx:
   board: generic-bk7231t-qfn32-tuya
