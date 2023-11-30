@@ -14,11 +14,11 @@ esphome:
   friendly_name: "${friendly_name}"
   name_add_mac_suffix: true
   project:
-    name: jjones.esplaser
-    version: "1.0.2"
+    name: jjones.esp8266laser
+    version: "0.0.1"
 
 dashboard_import:
-    package_import_url: github://jerryhjones/esphome-templates/laser.yaml@main
+    package_import_url: github://jerryhjones/esphome-templates/jjones-laser8266.yaml@main
     import_full_config: false # or true
 
 # Replace the ESP32 configuration with the ESP8266 configuration
