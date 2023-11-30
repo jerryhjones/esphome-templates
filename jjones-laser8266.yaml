@@ -5,7 +5,7 @@ substitutions:
 external_components:
   - source:
       type: git
-      url: https://github.com/jerryhjones/kaufHA-common@multipleddp
+      url: https://github.com/jerryhjones/kaufHA-common@jjones-ddp
     components: [ ddp ]
     refresh: always
 
@@ -15,10 +15,10 @@ esphome:
   name_add_mac_suffix: true
   project:
     name: jjones.esp8266laser
-    version: "1.0.2"
+    version: "1.0.3"
 
 dashboard_import:
-    package_import_url: github://jerryhjones/esphome-templates/jjones-laser8266.yaml@main
+    package_import_url: github://jerryhjones/esphome-templates/jjones-laser8266.yaml@1.0.3
     import_full_config: false # or true
 
 # Replace the ESP32 configuration with the ESP8266 configuration
