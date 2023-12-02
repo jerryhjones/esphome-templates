@@ -63,7 +63,7 @@ output:
 
 light:
   - platform: rgb
-    id: novostella_flood
+    id: ustellar_tank
     name: "${friendly_name}"
     red: output_red
     green: output_green
