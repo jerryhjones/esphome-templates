@@ -1,0 +1,68 @@
+substitutions:
+  name: "ustellar-tank"
+  friendly_name: "Ustellar Tank"
+
+external_components:
+  - source:
+      type: git
+      url: https://github.com/jerryhjones/kaufHA-common
+      ref: multipleddp
+    components: [ ddp ]
+    refresh: always
+
+esphome:
+  name: "${name}"
+  friendly_name: "${friendly_name}"
+  name_add_mac_suffix: true
+  project:
+    name: jjones.ustellartank
+    version: "1.0"
+
+dashboard_import:
+    package_import_url: github://jerryhjones/esphome-templates/jjones-ustellar-tank.yaml@tank-1.0
+    import_full_config: false # or true
+
+bk72xx:
+  board: generic-bk7231n-qfn32-tuya
+
+ddp:
+debug:
+button:
+  - platform: restart
+    name: "Restart"
+
+text_sensor:
+  - platform: debug
+    reset_reason:
+      name: "Reset Reason"
+
+sensor:
+  - platform: uptime
+    name: "Uptime"
+
+logger:
+api:
+ota:
+wifi:
+  ap:
+
+captive_portal:
+
+output:
+  - platform: libretiny_pwm
+    id: output_red
+    pin: P24 # Correct
+  - platform: libretiny_pwm
+    id: output_blue
+    pin: P26 # Correct
+  - platform: libretiny_pwm
+    id: output_green
+    pin: P6
+
+light:
+  - platform: rgb
+    id: novostella_flood
+    name: "${friendly_name}"
+    red: output_red
+    green: output_green
+    blue: output_blue
