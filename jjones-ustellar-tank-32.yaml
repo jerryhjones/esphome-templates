@@ -1,0 +1,70 @@
+substitutions:
+  name: "ustellar-tank32"
+  friendly_name: "Ustellar Tank32"
+
+external_components:
+  - source:
+      type: git
+      url: https://github.com/jerryhjones/kaufHA-common
+      ref: multipleddp
+    components: [ ddp ]
+    refresh: always
+
+esphome:
+  name: "${name}"
+  friendly_name: "${friendly_name}"
+  name_add_mac_suffix: true
+  project:
+    name: jjones.ustellartank32
+    version: "1.0"
+
+dashboard_import:
+    package_import_url: github://jerryhjones/esphome-templates/jjones-ustellar-tank-32@tank32-1.0
+    import_full_config: false # or true
+
+esp32:
+  board: esp32dev
+
+web_server:
+  port: 80
+ddp:
+debug:
+button:
+  - platform: restart
+    name: "Restart"
+
+text_sensor:
+  - platform: debug
+    reset_reason:
+      name: "Reset Reason"
+
+sensor:
+  - platform: uptime
+    name: "Uptime"
+
+logger:
+api:
+ota:
+wifi:
+  ap:
+
+captive_portal:
+
+output:
+  - platform: ledc  # Use ledc for PWM on ESP32
+    id: output_red
+    pin: GPIO23
+  - platform: ledc
+    id: output_blue
+    pin: GPIO22
+  - platform: ledc
+    id: output_green
+    pin: GPIO21
+    
+light:
+  - platform: rgb
+    id: ustellar_tank32
+    name: "${friendly_name}"
+    red: output_red
+    green: output_green
+    blue: output_blue
