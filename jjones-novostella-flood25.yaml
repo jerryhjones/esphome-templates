@@ -1,0 +1,73 @@
+substitutions:
+  name: "novostella-flood25"
+  friendly_name: "Novostella Flood25"
+
+external_components:
+  - source:
+      type: git
+      url: https://github.com/KaufHA/common
+    components: [ ddp ]
+    refresh: always
+
+esphome:
+  name: "${name}"
+  friendly_name: "${friendly_name}"
+  name_add_mac_suffix: true
+  project:
+    name: jjones.novostella-flood25
+    version: "1.0"
+
+dashboard_import:
+    package_import_url: github://jerryhjones/esphome-templates/jjones-novostella-flood25.yaml@novo25-1.0
+    import_full_config: false # or true
+
+logger:
+api:
+ota:
+wifi:
+  ap:
+
+captive_portal:
+
+bk72xx:
+  board: generic-bk7231t-qfn32-tuya
+
+web_server:
+  port: 80
+ddp:
+debug:
+
+button:
+  - platform: restart
+    name: Restart
+
+text_sensor:
+  - platform: debug
+    reset_reason:
+      name: Reset Reason
+  - platform: libretiny
+    version:
+      name: LibreTiny Version
+
+sensor:
+  - platform: uptime
+    name: Uptime
+
+output:
+  - platform: libretiny_pwm
+    id: output_red
+    pin: P24 # Correct
+  - platform: libretiny_pwm
+    id: output_blue
+    pin: P26 # Correct
+  - platform: libretiny_pwm
+    id: output_green
+    pin: P6
+
+light:
+  - platform: rgb
+    id: novostella_flood
+    name: "${friendly_name}"
+    red: output_red
+    green: output_green
+    blue: output_blue
