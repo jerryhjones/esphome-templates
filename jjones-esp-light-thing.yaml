@@ -16,10 +16,10 @@ esphome:
   name_add_mac_suffix: true
   project:
     name: jjones.esp-light-thing
-    version: "1.0"
+    version: "1.0.1"
 
 dashboard_import:
-    package_import_url: github://jerryhjones/esphome-templates/jjones-esp-light-thing.yaml@esp-light-thing-1.0
+    package_import_url: github://jerryhjones/esphome-templates/jjones-esp-light-thing.yaml@esp-light-thing-1.0.1
     import_full_config: true # or true
 
 esp8266:
