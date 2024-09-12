@@ -16,10 +16,10 @@ esphome:
   name_add_mac_suffix: true
   project:
     name: jjones.ustellartank
-    version: "1.0.11"
+    version: "1.0.12"
 
 dashboard_import:
-    package_import_url: github://jerryhjones/esphome-templates/jjones-ustellar-tank.yaml@tank-1.0.11 
+    package_import_url: github://jerryhjones/esphome-templates/jjones-ustellar-tank.yaml@tank-1.0.12
     import_full_config: false # or true
 
 bk72xx:
@@ -32,6 +32,7 @@ button:
   - platform: restart
     name: "Restart"
 
+debug:
 text_sensor:
   - platform: debug
     reset_reason:
