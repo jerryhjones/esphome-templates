@@ -13,13 +13,13 @@ external_components:
 esphome:
   name: "${name}"
   friendly_name: "${friendly_name}"
-  name_add_mac_suffix: false
+  name_add_mac_suffix: true
   project:
     name: jjones.ustellartank
-    version: "1.0.7"
+    version: "1.0.11"
 
 dashboard_import:
-    package_import_url: github://jerryhjones/esphome-templates/jjones-ustellar-tank.yaml@tank-1.0.8
+    package_import_url: github://jerryhjones/esphome-templates/jjones-ustellar-tank.yaml@tank-1.0.11 
     import_full_config: false # or true
 
 bk72xx:
