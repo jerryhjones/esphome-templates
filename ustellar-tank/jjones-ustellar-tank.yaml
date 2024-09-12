@@ -16,22 +16,23 @@ esphome:
   name_add_mac_suffix: true
   project:
     name: jjones.ustellartank
-    version: "1.0.12"
+    version: "1.0.13"
 
 dashboard_import:
-    package_import_url: github://jerryhjones/esphome-templates/jjones-ustellar-tank.yaml@tank-1.0.12
+    package_import_url: github://jerryhjones/esphome-templates/jjones-ustellar-tank.yaml@tank-1.0.13
     import_full_config: false # or true
 
 bk72xx:
   board: generic-bk7231n-qfn32-tuya
 
-web_server:
-  port: 80
+# web_server:
+#   port: 80
 ddp:
 button:
   - platform: restart
     name: "Restart"
 
+logger:
 debug:
 text_sensor:
   - platform: debug
