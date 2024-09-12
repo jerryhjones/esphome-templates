@@ -13,10 +13,10 @@ external_components:
 esphome:
   name: "${name}"
   friendly_name: "${friendly_name}"
-  name_add_mac_suffix: true
+  name_add_mac_suffix: false
   project:
     name: jjones.ustellartank
-    version: "1.0.6"
+    version: "1.0.7"
 
 dashboard_import:
     package_import_url: github://jerryhjones/esphome-templates/jjones-ustellar-tank.yaml@tank-1.0.6
@@ -45,7 +45,7 @@ sensor:
 logger:
 api:
 ota:
-  platform: esp_home
+  platform: esphome
 wifi:
   ap:
 
