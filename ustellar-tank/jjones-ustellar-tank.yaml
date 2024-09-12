@@ -19,7 +19,7 @@ esphome:
     version: "1.0.7"
 
 dashboard_import:
-    package_import_url: github://jerryhjones/esphome-templates/jjones-ustellar-tank.yaml@tank-1.0.6
+    package_import_url: github://jerryhjones/esphome-templates/jjones-ustellar-tank.yaml@tank-1.0.8
     import_full_config: false # or true
 
 bk72xx:
@@ -28,7 +28,6 @@ bk72xx:
 web_server:
   port: 80
 ddp:
-debug:
 button:
   - platform: restart
     name: "Restart"
@@ -42,7 +41,6 @@ sensor:
   - platform: uptime
     name: "Uptime"
 
-logger:
 api:
 ota:
   platform: esphome
