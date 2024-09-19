@@ -15,10 +15,10 @@ esphome:
   name_add_mac_suffix: true
   project:
     name: jjones.novostella-flood-RGBCW
-    version: "1.0.2"
+    version: "1.0.3"
 
 dashboard_import:
-    package_import_url: github://jerryhjones/esphome-templates/jjones-novostella-NTF36-RGBCW.yaml@novoRGBCW-1.0.2
+    package_import_url: github://jerryhjones/esphome-templates/jjones-novostella-NTF36-RGBCW.yaml@novoRGBCW-1.0.3
     import_full_config: false # or true
 
 logger:
@@ -30,7 +30,7 @@ wifi:
 captive_portal:
 
 bk72xx:
-  board: generic-bk7231t-qfn32-tuya
+  board: generic-bk7231n-qfn32-tuya
 
 web_server:
   port: 80
