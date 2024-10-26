@@ -16,10 +16,10 @@ esphome:
   name_add_mac_suffix: true
   project:
     name: jjones.esp8266laser
-    version: "1.0.4"
+    version: "esp8266laser-1.0.10"
 
 dashboard_import:
-    package_import_url: github://jerryhjones/esphome-templates/jjones-laser8266.yaml@1.0.4
+    package_import_url: github://jerryhjones/esphome-templates/jjones-laser8266.yaml@esp8266laser-1.0.10
     import_full_config: false # or true
 
 esp8266:
@@ -43,6 +43,11 @@ sensor:
 logger:
 api:
 ota:
+  platform: esphome
+
+web_server:
+  port: 80
+
 wifi:
   ap:
 
