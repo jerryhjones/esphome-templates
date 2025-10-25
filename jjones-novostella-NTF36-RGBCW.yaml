@@ -72,6 +72,7 @@ output:
 
 light:
   - platform: rgbww  # For an RGB light with both Warm White and Cool White
+    id: novostella_light         # ← add this line
     name: "${friendly_name}"
     red: output_red
     green: output_green
