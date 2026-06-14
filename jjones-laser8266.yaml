@@ -2,30 +2,21 @@ substitutions:
   name: "esp-laser"
   friendly_name: "ESP Laser"
 
-external_components:
-  - source:
-      type: git
-      url: https://github.com/jerryhjones/kaufHA-common
-      ref: multipleddp
-    components: [ ddp ]
-    refresh: always
-
 esphome:
   name: "${name}"
   friendly_name: "${friendly_name}"
   name_add_mac_suffix: true
   project:
     name: jjones.esp8266laser
-    version: "esp8266laser-1.0.10"
+    version: "esp8266laser-1.0.11"
 
 dashboard_import:
-    package_import_url: github://jerryhjones/esphome-templates/jjones-laser8266.yaml@esp8266laser-1.0.10
+    package_import_url: github://jerryhjones/esphome-templates/jjones-laser8266.yaml@esp8266laser-1.0.11
     import_full_config: false # or true
 
 esp8266:
   board: nodemcuv2
 
-ddp:
 debug:
 button:
   - platform: restart
@@ -72,24 +63,6 @@ output:
     id: 'null_output'
 
 light:
-  - platform: rgb
-    name: "DDP Composite Laser"
-    red: pwm_red
-    green: pwm_green
-    blue: pwm_blue
-    effects:
-      - ddp:
-          timeout: 10s
-          disable_gamma: true
-  - platform: rgb
-    name: "DDP Laser Rotation"
-    red: pwm_motor
-    green: null_output
-    blue: null_output
-    effects:
-      - ddp:
-          timeout: 10s
-          disable_gamma: true
   - platform: monochromatic
     name: "Red Laser"
     output: pwm_red
