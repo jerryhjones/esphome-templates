@@ -49,8 +49,10 @@ void CrowpanelRGB::setup() {
   config.timings.pclk_hz = this->pclk_frequency_;
   config.clk_src = LCD_CLK_SRC_PLL160M;
   size_t data_pin_count = sizeof(this->data_pins_) / sizeof(this->data_pins_[0]);
+  // st7701s's codegen swaps the pin bytes for big-endian pixels; LVGL renders native (little-endian)
+  // here, so undo it (assumes red/green/blue data_pins, which is what codegen swaps).
   for (size_t i = 0; i != data_pin_count; i++)
-    config.data_gpio_nums[i] = static_cast<gpio_num_t>(this->data_pins_[i]->get_pin());
+    config.data_gpio_nums[i] = static_cast<gpio_num_t>(this->data_pins_[(i + 8) % data_pin_count]->get_pin());
   config.data_width = data_pin_count;
   config.disp_gpio_num = GPIO_NUM_NC;
   config.hsync_gpio_num = static_cast<gpio_num_t>(this->hsync_pin_->get_pin());
