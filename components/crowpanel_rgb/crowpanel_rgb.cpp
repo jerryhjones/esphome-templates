@@ -91,6 +91,12 @@ void CrowpanelRGB::setup() {
 void CrowpanelRGB::loop() {
   if (!this->canvas_mode_ && this->fb_[0] != nullptr && lv_display_get_default() != nullptr)
     this->enable_canvas_mode_();
+  // Effects keep moving when LVGL has nothing to redraw (one present per loop at most).
+  if (this->canvas_ != nullptr && !this->presented_ && this->effects_active_()) {
+    this->frame_start_us_ = micros();
+    this->mirror_and_present_();
+  }
+  this->presented_ = false;
   if (!this->log_fps_)
     return;
   uint32_t now = millis();
@@ -178,7 +184,9 @@ void CrowpanelRGB::mirror_and_present_() {
     for (size_t i = 0; i != this->cur_count_; i++)
       this->copy_rect_(dst, this->canvas_, this->cur_[i]);
   }
+  this->draw_effects_(dst);
   this->swap_to_(dst);
+  this->presented_ = true;
   memcpy(this->prev_, this->cur_, sizeof(Rect) * this->cur_count_);
   this->prev_count_ = this->cur_count_;
   this->prev_full_ = this->cur_full_;
@@ -231,24 +239,40 @@ void CrowpanelRGB::draw_pixels_at(int x_start, int y_start, int w, int h, const 
   }
 }
 
-void CrowpanelRGB::slide(lvgl::LvglComponent *lv, bool forward, uint32_t duration_ms) {
-  auto change_page = [&]() {
-    forward ? lv->show_next_page(LV_SCREEN_LOAD_ANIM_NONE, 0) : lv->show_prev_page(LV_SCREEN_LOAD_ANIM_NONE, 0);
-  };
+// Snapshot the current picture into old_img_, apply `change`, and render the result into the canvas
+// without presenting it. False (change applied plainly) before canvas mode is up.
+bool CrowpanelRGB::begin_transition_(const std::function<void()> &change) {
   if (this->canvas_ == nullptr) {
-    change_page();  // not ready yet: plain page change
-    return;
+    change();
+    return false;
   }
-  const size_t w = this->width_, h = this->height_, bytes = w * h * sizeof(uint16_t);
-  uint32_t t_start = millis();
-  memcpy(this->old_img_, this->canvas_, bytes);  // the canvas is the current picture
-
-  // Render the new page into the canvas without presenting it.
+  memcpy(this->old_img_, this->canvas_, this->width_ * this->height_ * sizeof(uint16_t));
   this->capture_ = true;
-  change_page();
+  change();
   lv_refr_now(nullptr);
   this->capture_ = false;
-  uint32_t t_prep = millis();
+  return true;
+}
+
+// The shown buffer now equals the canvas (final frame); mirror it into the other one too.
+void CrowpanelRGB::end_transition_(const char *name, uint32_t t0, uint32_t frames) {
+  memcpy(this->hidden_(), this->canvas_, this->width_ * this->height_ * sizeof(uint16_t));
+  this->pbox_count_[0] = this->pbox_count_[1] = 0;
+  this->cur_count_ = this->prev_count_ = 0;
+  this->cur_full_ = this->prev_full_ = false;
+  if (this->log_fps_) {
+    uint32_t anim = millis() - t0;
+    ESP_LOGI(TAG, "%s: %u frames in %ums = %.1f fps", name, (unsigned) frames, (unsigned) anim,
+             anim ? frames * 1000.0f / anim : 0.0f);
+  }
+}
+
+void CrowpanelRGB::slide(lvgl::LvglComponent *lv, bool forward, uint32_t duration_ms) {
+  if (!this->begin_transition_([&]() {
+        forward ? lv->show_next_page(LV_SCREEN_LOAD_ANIM_NONE, 0) : lv->show_prev_page(LV_SCREEN_LOAD_ANIM_NONE, 0);
+      }))
+    return;
+  const size_t w = this->width_, h = this->height_;
 
   // Animate: each frame is two row copies (visible span only) into the hidden buffer, then a swap.
   const uint16_t *a = this->old_img_, *b = this->canvas_;
@@ -281,15 +305,52 @@ void CrowpanelRGB::slide(lvgl::LvglComponent *lv, bool forward, uint32_t duratio
     if (p >= 1.0f)
       break;
   }
-  // The shown buffer now equals the canvas (final frame); mirror it into the other one too.
-  memcpy(this->hidden_(), this->canvas_, bytes);
-  this->cur_count_ = this->prev_count_ = 0;
-  this->cur_full_ = this->prev_full_ = false;
-  if (this->log_fps_) {
-    uint32_t anim = millis() - t0;
-    ESP_LOGI(TAG, "slide: prep %ums, %u frames in %ums = %.1f fps", (unsigned) (t_prep - t_start), (unsigned) n,
-             (unsigned) anim, anim ? n * 1000.0f / anim : 0.0f);
+  this->end_transition_("slide", t0, n);
+}
+
+void CrowpanelRGB::iris(bool open, const std::function<void()> &change, uint32_t edge_color, uint32_t duration_ms) {
+  if (!this->begin_transition_(change))
+    return;
+  // open: the new picture inside a growing circle; close: the old picture inside a shrinking one
+  const uint16_t *in = open ? this->canvas_ : this->old_img_, *out = open ? this->old_img_ : this->canvas_;
+  const uint16_t edge = ((edge_color >> 8) & 0xF800) | ((edge_color >> 5) & 0x07E0) | ((edge_color >> 3) & 0x001F);
+  const int w = this->width_, h = this->height_, ring = 4;
+  const float cx = w / 2.0f, cy = h / 2.0f, rmax = cx + ring + 3;  // final open frame: ring fully past the visible rim
+  uint32_t t0 = millis(), n = 0;
+  for (;;) {
+    float p = std::min(1.0f, (millis() - t0) / (float) duration_ms);
+    float e = open ? 1.0f - (1.0f - p) * (1.0f - p) * (1.0f - p) : p * p * p;  // fast near the rim
+    float r = (open ? e : 1.0f - e) * rmax, ri = std::max(0.0f, r - ring);
+    uint16_t *dst = this->hidden_();
+    for (int y = 0; y < h; y++) {
+      int lo = this->span_lo_[y], hi = w - lo;
+      if (lo >= hi)
+        continue;
+      uint16_t *row = dst + y * w;
+      float dy = y + 0.5f - cy;
+      // columns: out [lo,a) edge [a,b) in [b,c) edge [c,d) out [d,hi)
+      float ho = r * r > dy * dy ? sqrtf(r * r - dy * dy) : -1.0f;
+      float hi_ = ri * ri > dy * dy ? sqrtf(ri * ri - dy * dy) : -1.0f;
+      auto clampx = [&](float x) { return std::min(hi, std::max(lo, (int) (x + 0.5f))); };
+      int a = ho < 0 ? hi : clampx(cx - ho), d = ho < 0 ? hi : clampx(cx + ho);
+      int b = hi_ < 0 ? a : clampx(cx - hi_), cc = hi_ < 0 ? a : clampx(cx + hi_);
+      if (hi_ < 0)  // inside the ring band only: all edge
+        b = cc = d;
+      const uint16_t *orow = out + y * w, *irow = in + y * w;
+      memcpy(row + lo, orow + lo, (a - lo) * 2);
+      std::fill(row + a, row + b, edge);
+      memcpy(row + b, irow + b, (cc - b) * 2);
+      std::fill(row + cc, row + d, edge);
+      if (d < hi)
+        memcpy(row + d, orow + d, (hi - d) * 2);
+    }
+    this->swap_to_(dst);
+    n++;
+    App.feed_wdt();
+    if (p >= 1.0f)
+      break;
   }
+  this->end_transition_(open ? "iris open" : "iris close", t0, n);
 }
 
 void CrowpanelRGB::dump_config() {
@@ -298,6 +359,157 @@ void CrowpanelRGB::dump_config() {
                 "  Pipeline: LVGL canvas mirrored to 2 framebuffers, swap on frame-complete\n"
                 "  PCLK: %u Hz, inverted: %s",
                 (unsigned) this->pclk_frequency_, YESNO(this->pclk_inverted_));
+}
+
+// ---- Framebuffer effects: drawn over the canvas into each frame after LVGL, never into the canvas,
+// so every effect pixel is canvas-under-it blended with colour and erases itself next time.
+
+static inline uint16_t blend565(uint16_t bg, uint16_t fg, uint32_t a /* 0..32 */) {
+  uint32_t b = (bg | (bg << 16)) & 0x07E0F81F, f = (fg | (fg << 16)) & 0x07E0F81F;
+  uint32_t r = (b + (((f - b) * a) >> 5)) & 0x07E0F81F;
+  return (uint16_t) (r | (r >> 16));
+}
+static inline uint16_t rgb565(uint32_t c) {
+  return ((c >> 8) & 0xF800) | ((c >> 5) & 0x07E0) | ((c >> 3) & 0x001F);
+}
+
+bool CrowpanelRGB::effects_active_() {
+  return this->comet_on_ || this->comet_clean_ > 0 || this->particles_alive_ > 0 || this->pbox_count_[0] > 0 ||
+         this->pbox_count_[1] > 0;
+}
+
+void CrowpanelRGB::comet(bool on, uint32_t color, uint32_t period_ms) {
+  if (on && this->ring_px_ == nullptr) {
+    // every pixel of the rim band, with its angle and radius (for antialiased edges); ~170KB, PSRAM
+    const float cx = this->width_ / 2.0f, cy = this->height_ / 2.0f;
+    for (int pass = 0; pass < 2; pass++) {
+      size_t n = 0;
+      for (int y = 0; y < (int) this->height_; y++)
+        for (int x = 0; x < (int) this->width_; x++) {
+          float dx = x + 0.5f - cx, dy = y + 0.5f - cy, r = sqrtf(dx * dx + dy * dy);
+          if (r < COMET_R - COMET_W - 1 || r > COMET_R + 1)
+            continue;
+          if (pass == 1) {
+            float ang = atan2f(dx, -dy);  // 0 at 12 o'clock, clockwise
+            if (ang < 0)
+              ang += 2 * (float) M_PI;
+            this->ring_px_[n] = {(uint32_t) (y * this->width_ + x), (uint16_t) (ang / (2 * (float) M_PI) * 65536.0f),
+                                 (uint16_t) (r * 16)};
+          }
+          n++;
+        }
+      if (pass == 0) {
+        this->ring_px_ = static_cast<RingPx *>(heap_caps_malloc(n * sizeof(RingPx), MALLOC_CAP_SPIRAM));
+        if (this->ring_px_ == nullptr)
+          return;
+        this->ring_n_ = n;
+      }
+    }
+  }
+  if (on) {
+    this->comet_color_ = rgb565(color);
+    this->comet_period_ms_ = std::max<uint32_t>(period_ms, 100);
+    if (!this->comet_on_)
+      this->comet_t0_ = millis();
+  } else if (this->comet_on_) {
+    this->comet_clean_ = 2;  // restore the band in both buffers
+  }
+  this->comet_on_ = on;
+}
+
+void CrowpanelRGB::burst(int x, int y, int count) {
+  static const uint32_t PALETTE[] = {0x3DDC84, 0xFFB020, 0xFF4D5E, 0x5BA8FF, 0xFFFFFF, 0xB98CFF};
+  count = std::min<int>(count, MAX_PARTICLES);
+  for (int i = 0; i < count; i++) {
+    Particle &p = this->particles_[i];
+    float ang = (i + (random_uint32() % 100) / 100.0f) * 2 * (float) M_PI / count;
+    float speed = 260 + random_uint32() % 220;  // px/s
+    p = {(float) x, (float) y, cosf(ang) * speed, sinf(ang) * speed - 120, 0, 0.9f + (random_uint32() % 50) / 100.0f,
+         4.0f + (random_uint32() % 30) / 10.0f, rgb565(PALETTE[i % 6])};
+  }
+  this->particles_alive_ = count;
+  this->particles_last_ms_ = millis();
+}
+
+void CrowpanelRGB::draw_effects_(uint16_t *dst) {
+  const int w = this->width_, h = this->height_;
+  const int bi = dst == this->fb_[0] ? 0 : 1;
+  // Restore what particles left in this buffer last time.
+  for (int i = 0; i < this->pbox_count_[bi]; i++)
+    this->copy_rect_(dst, this->canvas_, this->pbox_[bi][i]);
+  this->pbox_count_[bi] = 0;
+
+  if (this->comet_on_ || this->comet_clean_ > 0) {
+    if (!this->comet_on_) {
+      for (const RingPx &px : this->ring())
+        dst[px.off] = this->canvas_[px.off];
+      this->comet_clean_--;
+    } else {
+      const uint32_t head = (uint32_t) (((millis() - this->comet_t0_) % this->comet_period_ms_) * 65536ULL /
+                                        this->comet_period_ms_);
+      const float tail = COMET_TAIL_DEG / 360.0f * 65536.0f, outer = COMET_R;
+      const float px_per_unit = COMET_R * 2 * (float) M_PI / 65536.0f;
+      for (const RingPx &px : this->ring()) {
+        uint16_t bg = this->canvas_[px.off];
+        uint32_t d = (head - px.ang) & 0xFFFF;  // how far behind the head
+        float t = d / tail;
+        if (d > 0x8000)  // ahead of the head: only the rounded tip
+          t = -(float) (0x10000 - d) / tail;
+        float tip = t < 0 ? -t * tail * px_per_unit : 0;  // px ahead of the head
+        if (t >= 1.0f || tip > COMET_W / 2) {
+          dst[px.off] = bg;
+          continue;
+        }
+        float r = px.r16 / 16.0f;
+        float tt = std::max(0.0f, t), thick = COMET_W * (1.0f - 0.65f * tt);
+        float half = thick / 2;
+        // distance from the band centre line, rounded at the tip
+        float dr = fabsf(r - (outer - half)), dist = tip > 0 ? sqrtf(dr * dr + tip * tip) : dr;
+        float cov = std::min(1.0f, std::max(0.0f, half - dist + 0.5f));
+        float fade = (1.0f - tt) * (1.0f - tt);
+        uint32_t a = (uint32_t) (cov * fade * 32.0f + 0.5f);
+        dst[px.off] = a ? blend565(bg, this->comet_color_, a) : bg;
+      }
+    }
+  }
+
+  if (this->particles_alive_ > 0) {
+    uint32_t now = millis();
+    float dt = std::min(0.05f, (now - this->particles_last_ms_) / 1000.0f);
+    this->particles_last_ms_ = now;
+    int alive = 0;
+    for (int i = 0; i < MAX_PARTICLES; i++) {
+      Particle &p = this->particles_[i];
+      if (p.age >= p.life)
+        continue;
+      p.age += dt;
+      p.vx *= 1.0f - 2.2f * dt;  // drag
+      p.vy = p.vy * (1.0f - 2.2f * dt) + 520 * dt;  // gravity
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      if (p.age >= p.life)
+        continue;
+      alive++;
+      float k = p.age / p.life, rad = p.size * (k < 0.6f ? 1.0f : 1.0f - (k - 0.6f) / 0.4f * 0.6f);
+      float opa = k < 0.6f ? 1.0f : 1.0f - (k - 0.6f) / 0.4f;
+      int x0 = std::max(0, (int) (p.x - rad - 1)), x1 = std::min(w, (int) (p.x + rad + 2));
+      int y0 = std::max(0, (int) (p.y - rad - 1)), y1 = std::min(h, (int) (p.y + rad + 2));
+      if (x0 >= x1 || y0 >= y1)
+        continue;
+      for (int y = y0; y < y1; y++)
+        for (int x = x0; x < x1; x++) {
+          float dx = x + 0.5f - p.x, dy = y + 0.5f - p.y;
+          float cov = std::min(1.0f, std::max(0.0f, rad - sqrtf(dx * dx + dy * dy) + 0.5f));
+          uint32_t a = (uint32_t) (cov * opa * 32.0f + 0.5f);
+          if (a)
+            dst[y * w + x] = blend565(this->canvas_[y * w + x], p.color, a);
+        }
+      if (this->pbox_count_[bi] < MAX_PARTICLES)
+        this->pbox_[bi][this->pbox_count_[bi]++] = {(int16_t) x0, (int16_t) y0, (int16_t) (x1 - x0),
+                                                    (int16_t) (y1 - y0)};
+    }
+    this->particles_alive_ = alive;
+  }
 }
 
 }  // namespace esphome::crowpanel_rgb

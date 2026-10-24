@@ -6,6 +6,7 @@
 #include "esphome/core/helpers.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
+#include <functional>
 #include <vector>
 
 namespace esphome::crowpanel_rgb {
@@ -40,6 +41,14 @@ class CrowpanelRGB : public st7701s::ST7701S {
 
   // Slide to the next/previous LVGL page. From YAML: lambda: 'id(my_display).slide(id(lvgl_main), true);'
   void slide(lvgl::LvglComponent *lv, bool forward, uint32_t duration_ms = 300);
+  // Circular reveal: apply `change` (e.g. show/hide an overlay) behind a growing (open) or shrinking
+  // (close) circle with a thin edge ring. lambda: 'id(my_display).iris(true, [](){ ... }, 0x3DDC84);'
+  // Comet circling the rim (drawn over every frame, no LVGL redraws). comet(false) clears it.
+  void comet(bool on, uint32_t color = 0xFFFFFF, uint32_t period_ms = 1400);
+  // Confetti burst from screen point (x, y).
+  void burst(int x, int y, int count = 14);
+  void iris(bool open, const std::function<void()> &change, uint32_t edge_color = 0xFFFFFF,
+            uint32_t duration_ms = 380);
 
  protected:
   struct Rect {
@@ -49,6 +58,10 @@ class CrowpanelRGB : public st7701s::ST7701S {
   static constexpr size_t MAX_RECTS = 32;
 
   void enable_canvas_mode_();
+  bool effects_active_();
+  void draw_effects_(uint16_t *dst);
+  bool begin_transition_(const std::function<void()> &change);
+  void end_transition_(const char *name, uint32_t t0, uint32_t frames);
   void add_rect_(int x, int y, int w, int h);
   void copy_rect_(uint16_t *dst, const uint16_t *src, const Rect &r);
   void mirror_and_present_();          // canvas mode: copy dirty areas into hidden buffer, swap
@@ -73,6 +86,38 @@ class CrowpanelRGB : public st7701s::ST7701S {
   size_t cur_count_{0};
   bool cur_full_{false};
   bool frame_open_{false};
+
+  bool presented_{false};             // a frame went out since the last loop()
+
+  // effects
+  static constexpr float COMET_R = 228, COMET_W = 14, COMET_TAIL_DEG = 140;
+  struct RingPx {
+    uint32_t off;
+    uint16_t ang;  // 0..65535 = full turn from 12 o'clock, clockwise
+    uint16_t r16;  // radius * 16
+  };
+  RingPx *ring_px_{nullptr};
+  size_t ring_n_{0};
+  struct RingSpan {
+    const RingPx *b, *e;
+    const RingPx *begin() const { return b; }
+    const RingPx *end() const { return e; }
+  };
+  RingSpan ring() const { return {this->ring_px_, this->ring_px_ + this->ring_n_}; }
+  bool comet_on_{false};
+  int comet_clean_{0};
+  uint16_t comet_color_{0xFFFF};
+  uint32_t comet_t0_{0}, comet_period_ms_{1400};
+  static constexpr int MAX_PARTICLES = 16;
+  struct Particle {
+    float x, y, vx, vy, age, life, size;
+    uint16_t color;
+  };
+  Particle particles_[MAX_PARTICLES]{};
+  int particles_alive_{0};
+  uint32_t particles_last_ms_{0};
+  Rect pbox_[2][MAX_PARTICLES]{};      // particle boxes drawn into each display buffer
+  int pbox_count_[2]{};
 
   bool log_fps_{false};
   uint32_t frames_{0}, render_us_{0}, wait_us_{0}, worst_render_us_{0}, last_log_ms_{0};
